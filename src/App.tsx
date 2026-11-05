@@ -42,6 +42,7 @@ import {
   monthLabel,
   monthOf,
   nextPayday,
+  nextPaymentPlan,
   paidFor,
   overdueEntries,
   parseBackup,
@@ -702,17 +703,8 @@ export default function App() {
   const pipeline = sum(
     monthEntries.filter((e) => !e.eligible).map((e) => e.amount),
   );
-  const upcoming = [
-    monthOf(today()),
-    shiftMonth(monthOf(today()), 1),
-    shiftMonth(monthOf(today()), 2),
-  ]
-    .flatMap((m) => entries(data, m))
-    .filter((e) => e.eligible && e.date >= today() && remaining(data, e) > 0)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const nextDate = upcoming[0]?.date;
-  const nextEntries = upcoming.filter((e) => e.date === nextDate);
-  const nextAmount = sum(nextEntries.map((e) => remaining(data, e)));
+  const nextPayment = nextPaymentPlan(data, currentDate);
+  const nextDate = nextPayment.date;
   const overdue = overdueEntries(data);
   const reminders = paymentReminders(data, currentDate);
   const reminderDate = reminders[0]?.date;
@@ -1259,7 +1251,10 @@ export default function App() {
               </div>
             </section>
             <div className="overview-grid">
-              <section className="panel next-payment">
+              <section
+                className="panel next-payment"
+                aria-label="Ближайшая выплата"
+              >
                 <div className="section-header">
                   <h2>Ближайшая выплата</h2>
                   <span className="badge neutral">
@@ -1270,10 +1265,17 @@ export default function App() {
                   <div>
                     <span className="subtle">
                       {nextDate
-                        ? `${dateLabel(nextDate, true)} · ${Math.max(0, Math.round((Date.parse(nextDate) - Date.parse(today())) / 86400000))} дн. до выплаты`
+                        ? `${dateLabel(nextDate, true)} · ${Math.max(0, Math.round((Date.parse(nextDate) - Date.parse(currentDate)) / 86400000))} дн. до выплаты`
                         : "Всё получено"}
                     </span>
-                    <strong className="next-amount">{money(nextAmount)}</strong>
+                    <strong className="next-amount">
+                      {money(nextPayment.amount)}
+                    </strong>
+                    {nextPayment.projectedBonus > 0 && (
+                      <small className="next-forecast-caption">
+                        План с учётом незакрытых этапов
+                      </small>
+                    )}
                   </div>
                   <span className="payment-arrow">
                     <ArrowDownLeft size={27} weight="light" />
@@ -1281,9 +1283,10 @@ export default function App() {
                 </div>
                 <div className="payday-track">
                   {["01", "15"].map((day) => {
-                    const date = `${monthOf(today())}-${day}`;
-                    const payEntries = entries(data, monthOf(today())).filter(
-                      (e) => e.date === date && e.eligible,
+                    const payoutMonth = monthOf(nextDate ?? currentDate);
+                    const date = `${payoutMonth}-${day}`;
+                    const payEntries = entries(data, payoutMonth).filter(
+                      (e) => e.date === date,
                     );
                     const complete =
                       payEntries.length > 0 &&
@@ -1312,34 +1315,31 @@ export default function App() {
                 <div className="next-breakdown">
                   <div>
                     <span>Фиксированная часть</span>
-                    <strong>
-                      {money(
-                        sum(
-                          nextEntries
-                            .filter((e) => e.type === "salary")
-                            .map((e) => remaining(data, e)),
-                        ),
-                      )}
-                    </strong>
+                    <strong>{money(nextPayment.salary)}</strong>
                   </div>
                   <div>
                     <span>Бонусы за этапы</span>
-                    <strong>
-                      {money(
-                        sum(
-                          nextEntries
-                            .filter((e) => e.type === "bonus")
-                            .map((e) => remaining(data, e)),
-                        ),
-                      )}
-                    </strong>
+                    <strong>{money(nextPayment.bonus)}</strong>
                   </div>
+                  {nextPayment.projectedBonus > 0 && (
+                    <p className="next-forecast-note">
+                      <Info size={16} aria-hidden="true" />
+                      <span>
+                        Из бонусов {money(nextPayment.projectedBonus)} — прогноз
+                        по незакрытым этапам. Эти деньги станут доступны после
+                        закрытия этапов.
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <button
                   className="panel-footer-button"
                   onClick={() => {
-                    setMonth(nextDate ? monthOf(nextDate) : monthOf(today()));
+                    setMonth(
+                      nextDate ? monthOf(nextDate) : monthOf(currentDate),
+                    );
                     setPaymentTab("expected");
+                    setPaymentFilter("all");
                     navigate("payments");
                   }}
                 >

@@ -6,6 +6,7 @@ import {
   entries,
   monthOf,
   nextPayday,
+  nextPaymentPlan,
   overdueEntries,
   paidFor,
   parseBackup,
@@ -44,6 +45,119 @@ function fixture() {
   });
   return { d, s };
 }
+
+function payoutFixture() {
+  const { d, s } = fixture();
+  d.settings.startMonth = "2026-11";
+  d.settings.salaryPlans = [{ from: "2026-11", first: 20000, second: 20000 }];
+  s.amount = 104440;
+  s.dueDate = "2026-11-10";
+  d.payments.push({
+    id: "salary-received",
+    entryId: "salary-2026-11-01",
+    amount: 20000,
+    date: "2026-11-02",
+    note: "",
+  });
+  return { d, s };
+}
+
+describe("План ближайшей выплаты", () => {
+  it("включает в 15 ноября плановый бонус 7310,80 из месячного прогноза", () => {
+    const { d, s } = payoutFixture();
+    const before = JSON.stringify(d);
+    expect(nextPaymentPlan(d, "2026-11-05")).toEqual({
+      date: "2026-11-15",
+      amount: 27310.8,
+      salary: 20000,
+      bonus: 7310.8,
+      projectedBonus: 7310.8,
+    });
+    const stage = entries(d, "2026-11").find((e) => e.id === s.id)!;
+    expect(() => registerPayment(d, stage, 1000, today())).toThrow(
+      "Сначала закройте",
+    );
+    expect(JSON.stringify(d)).toBe(before);
+  });
+  it("после закрытия сохраняет общий план, а при получении уменьшает остаток", () => {
+    const { d, s } = payoutFixture();
+    s.status = "closed";
+    s.closedDate = "2026-11-04";
+    expect(nextPaymentPlan(d, "2026-11-05").projectedBonus).toBe(0);
+    expect(nextPaymentPlan(d, "2026-11-05").amount).toBe(27310.8);
+    d.payments.push({
+      id: "partial",
+      entryId: s.id,
+      amount: 5000,
+      date: "2026-11-05",
+      note: "",
+    });
+    expect(nextPaymentPlan(d, "2026-11-05").bonus).toBe(2310.8);
+    expect(nextPaymentPlan(d, "2026-11-05").amount).toBe(22310.8);
+    d.payments.push({
+      id: "rest",
+      entryId: s.id,
+      amount: 2310.8,
+      date: "2026-11-05",
+      note: "",
+    });
+    expect(nextPaymentPlan(d, "2026-11-05").bonus).toBe(0);
+    expect(nextPaymentPlan(d, "2026-11-05").amount).toBe(20000);
+    d.payments.push({
+      id: "salary-rest",
+      entryId: "salary-2026-11-15",
+      amount: 20000,
+      date: "2026-11-05",
+      note: "",
+    });
+    expect(nextPaymentPlan(d, "2026-11-05").date).toBe("2026-12-01");
+  });
+  it("учитывает только выбранную дату выплаты, без бонусов следующей выплаты и старого долга", () => {
+    const { d, s } = payoutFixture();
+    s.dueDate = "2026-11-20";
+    d.payments = [];
+    expect(nextPaymentPlan(d, "2026-11-05")).toEqual({
+      date: "2026-11-15",
+      amount: 20000,
+      salary: 20000,
+      bonus: 0,
+      projectedBonus: 0,
+    });
+    expect(overdueEntries(d, "2026-11-05")).toHaveLength(1);
+  });
+  it("находит плановый бонус без оклада, даже дальше трёх месяцев", () => {
+    const { d, s } = payoutFixture();
+    d.settings.salaryPlans[0].first = 0;
+    d.settings.salaryPlans[0].second = 0;
+    d.payments = [];
+    s.dueDate = "2027-04-20";
+    expect(nextPaymentPlan(d, "2026-11-05")).toEqual({
+      date: "2027-05-01",
+      amount: 7310.8,
+      salary: 0,
+      bonus: 7310.8,
+      projectedBonus: 7310.8,
+    });
+  });
+  it("не помечает плановый бонус как начисленный в напоминании", () => {
+    const { d } = payoutFixture();
+    expect(paymentReminders(d, "2026-11-13").map((e) => e.type)).toEqual([
+      "salary",
+    ]);
+    expect(nextPaymentPlan(d, "2026-11-13").amount).toBe(27310.8);
+  });
+  it("возвращает пустой план, если больше нет выплат", () => {
+    const d = emptyData();
+    d.settings.salaryPlans = [{ from: "2026-01", first: 0, second: 0 }];
+    expect(nextPaymentPlan(d, "2026-11-05")).toEqual({
+      date: undefined,
+      amount: 0,
+      salary: 0,
+      bonus: 0,
+      projectedBonus: 0,
+    });
+  });
+});
 describe("Начисление бонуса и расписание", () => {
   it("считает 7% с округлением до копеек", () => {
     expect(bonus({ ...fixture().s, amount: 1234.56 })).toBe(86.42);

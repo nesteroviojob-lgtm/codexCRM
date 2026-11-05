@@ -174,6 +174,41 @@ export function overdueEntries(data: Data, asOf = today()): Entry[] {
     .filter((e) => e.eligible && e.date < asOf && remaining(data, e) > 0)
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** Nearest scheduled payout, including bonuses still conditional on stage closure. */
+export function nextPaymentPlan(data: Data, asOf = today()) {
+  const currentMonth = monthOf(asOf);
+  const months = new Set([currentMonth, shiftMonth(currentMonth, 1)]);
+  if (data.settings.startMonth >= currentMonth)
+    months.add(data.settings.startMonth);
+  for (const plan of data.settings.salaryPlans)
+    if (plan.from >= currentMonth) months.add(plan.from);
+  for (const project of data.projects)
+    for (const stage of project.stages) {
+      const month = monthOf(
+        nextPayday(
+          stage.status === "closed" ? stage.closedDate : stage.dueDate,
+        ),
+      );
+      if (month >= currentMonth) months.add(month);
+    }
+  const upcoming = [...months]
+    .flatMap((month) => entries(data, month))
+    .filter((e) => e.date >= asOf && remaining(data, e) > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const date = upcoming[0]?.date;
+  const scheduled = upcoming.filter((e) => e.date === date);
+  const total = (list: Entry[]) =>
+    round(list.reduce((sum, e) => sum + remaining(data, e), 0));
+  return {
+    date,
+    amount: total(scheduled),
+    salary: total(scheduled.filter((e) => e.type === "salary")),
+    bonus: total(scheduled.filter((e) => e.type === "bonus")),
+    projectedBonus: total(scheduled.filter((e) => !e.eligible)),
+  };
+}
+
 export function findEntry(data: Data, entryId: string): Entry | undefined {
   if (entryId.startsWith("salary-"))
     return entries(data, entryId.slice(7, 14)).find((e) => e.id === entryId);
