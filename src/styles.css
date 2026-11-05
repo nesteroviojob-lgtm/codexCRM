@@ -2980,3 +2980,139 @@ select {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Income history and future plans share the same monthly scale. */
+.income-panel {
+  display: flex;
+  flex-direction: column;
+}
+.income-panel .income-chart {
+  min-height: 210px;
+  flex: 1;
+}
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+.chart-mode {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--ground);
+}
+.chart-mode button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chart-mode button[aria-pressed="true"] {
+  background: white;
+  color: var(--primary);
+  font-weight: 650;
+  box-shadow: 0 1px 4px #0001;
+}
+.chart-period {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.chart-period .icon-button {
+  width: 40px;
+  height: 44px;
+}
+.chart-period > span {
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+  min-width: 0;
+}
+.income-panel .chart-legend {
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.bar-projected,
+.projected-key {
+  background: repeating-linear-gradient(
+    45deg,
+    #a4bda0,
+    #a4bda0 3px,
+    #dce8d9 3px,
+    #dce8d9 6px
+  );
+}
+.chart-legend .projected-key {
+  width: 12px;
+}
+.chart-tooltip small {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.chart-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  border-top: 1px solid var(--line);
+  margin: 0 20px;
+  padding: 10px 0 0;
+  font-size: 12px;
+}
+.chart-summary > span {
+  color: var(--muted);
+}
+.chart-summary strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-summary .text-button {
+  margin-left: auto;
+  min-height: 40px;
+  font-size: 11px;
+}
+.chart-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 4px 20px 16px;
+}
+@media (max-width: 600px) {
+  .chart-controls {
+    padding: 14px 16px 0;
+    gap: 8px;
+  }
+  .chart-period {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .chart-period > span {
+    flex: 1;
+  }
+  .chart-mode button {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+  .chart-summary {
+    margin: 0 16px;
+  }
+  .chart-summary .text-button {
+    margin-left: 0;
+  }
+  .chart-note {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+  .income-panel .chart-legend {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

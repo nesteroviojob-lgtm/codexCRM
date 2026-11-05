@@ -38,6 +38,7 @@ import {
   entries,
   findEntry,
   id,
+  incomeForMonth,
   money,
   monthLabel,
   monthOf,
@@ -61,6 +62,7 @@ import type {
   Data,
   DeletedItem,
   Entry,
+  IncomeMode,
   Payment,
   Project,
   Stage,
@@ -540,72 +542,176 @@ function PaymentForm({
 function IncomeChart({
   data,
   month,
+  currentMonth,
   onMonth,
 }: {
   data: Data;
   month: string;
+  currentMonth: string;
   onMonth: (m: string) => void;
 }) {
-  const months = Array.from({ length: 6 }, (_, i) => shiftMonth(month, i - 5));
-  const values = months.map((m) => ({
-    month: m,
-    salary: sum(
-      data.payments
-        .filter((p) => monthOf(p.date) === m && p.entryId.startsWith("salary-"))
-        .map((p) => p.amount),
-    ),
-    bonus: sum(
-      data.payments
-        .filter(
-          (p) => monthOf(p.date) === m && !p.entryId.startsWith("salary-"),
-        )
-        .map((p) => p.amount),
-    ),
-  }));
-  const max = Math.max(20000, ...values.map((v) => v.salary + v.bonus));
+  const [endMonth, setEndMonth] = useState(month);
+  const [mode, setMode] = useState<IncomeMode>(
+    month > currentMonth ? "plan" : "received",
+  );
+  useEffect(() => {
+    setEndMonth((end) =>
+      month < shiftMonth(end, -5) || month > end ? month : end,
+    );
+    if (month > currentMonth) setMode("plan");
+  }, [month, currentMonth]);
+  const months = Array.from({ length: 6 }, (_, i) =>
+    shiftMonth(endMonth, i - 5),
+  );
+  const values = months.map((m) => incomeForMonth(data, m, mode));
+  const selected =
+    values.find((v) => v.month === month) ?? values[values.length - 1];
+  const max = Math.max(20000, ...values.map((v) => v.total));
   const ceiling = Math.ceil(max / 20000) * 20000;
+  function move(by: number) {
+    const next = shiftMonth(endMonth, by);
+    setEndMonth(next);
+    if (next > currentMonth) setMode("plan");
+    onMonth(next);
+  }
+  function reset() {
+    setEndMonth(currentMonth);
+    setMode("received");
+    onMonth(currentMonth);
+  }
   return (
-    <div className="income-chart">
-      <div className="chart-axis">
-        {[1, 0.5, 0].map((v) => (
-          <span key={v}>{(ceiling * v) / 1000} тыс.</span>
-        ))}
-      </div>
-      <div className="chart-plot">
-        <div className="chart-grid">
-          <i />
-          <i />
-          <i />
+    <section className="panel income-panel" aria-label="Динамика дохода">
+      <div className="section-header">
+        <div>
+          <h2>Динамика дохода</h2>
+          <p>
+            {mode === "plan"
+              ? "План дохода по датам выплат"
+              : "Фактически получено по датам поступлений"}
+          </p>
         </div>
-        <div className="chart-columns">
-          {values.map((v) => (
-            <button
-              key={v.month}
-              className={`chart-column ${v.month === month ? "current" : ""}`}
-              onClick={() => onMonth(v.month)}
-              aria-label={`${monthLabel(v.month)}: оклад ${money(v.salary)}, бонусы ${money(v.bonus)}`}
-            >
-              <span className="chart-tooltip">
-                {monthLabel(v.month)}
-                <strong>{money(v.salary + v.bonus)}</strong>
-              </span>
-              <span
-                className="bar-stack"
-                style={{ height: `${((v.salary + v.bonus) / ceiling) * 100}%` }}
-              >
-                <span className="bar-bonus" style={{ flex: v.bonus }} />
-                <span className="bar-salary" style={{ flex: v.salary }} />
-              </span>
-              <span className="chart-month">
-                {new Intl.DateTimeFormat("ru-RU", { month: "short" })
-                  .format(new Date(`${v.month}-01`))
-                  .replace(".", "")}
-              </span>
-            </button>
+        <ChartBar size={20} className="muted" aria-hidden="true" />
+      </div>
+      <div className="chart-controls">
+        <div className="chart-mode" role="group" aria-label="Режим графика">
+          <button
+            aria-pressed={mode === "received"}
+            onClick={() => setMode("received")}
+          >
+            Получено
+          </button>
+          <button
+            aria-pressed={mode === "plan"}
+            onClick={() => setMode("plan")}
+          >
+            План
+          </button>
+        </div>
+        <div className="chart-period" role="group" aria-label="Период графика">
+          <button
+            className="icon-button"
+            aria-label="Показать предыдущие месяцы"
+            onClick={() => move(-1)}
+          >
+            <CaretLeft size={16} />
+          </button>
+          <span aria-live="polite" aria-atomic="true">
+            {monthLabel(months[0])} — {monthLabel(endMonth)}
+          </span>
+          <button
+            className="icon-button"
+            aria-label="Показать следующие месяцы"
+            onClick={() => move(1)}
+          >
+            <CaretRight size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="chart-legend">
+        <span>
+          <i className="salary-key" />
+          Оклад
+        </span>
+        <span>
+          <i className="bonus-key" />
+          {mode === "plan" ? "Начисленные бонусы" : "Бонусы за проекты"}
+        </span>
+        {mode === "plan" && (
+          <span>
+            <i className="projected-key" />
+            Бонусы в прогнозе
+          </span>
+        )}
+        <span className="chart-unit">₽ / месяц</span>
+      </div>
+      <div className="income-chart">
+        <div className="chart-axis">
+          {[1, 0.5, 0].map((v) => (
+            <span key={v}>{(ceiling * v) / 1000} тыс.</span>
           ))}
         </div>
+        <div className="chart-plot">
+          <div className="chart-grid">
+            <i />
+            <i />
+            <i />
+          </div>
+          <div className="chart-columns">
+            {values.map((v) => (
+              <button
+                key={v.month}
+                className={`chart-column ${v.month === month ? "current" : ""}`}
+                onClick={() => onMonth(v.month)}
+                aria-pressed={v.month === month}
+                aria-label={`${monthLabel(v.month)}: ${mode === "plan" ? "план" : "получено"} ${money(v.total)}; оклад ${money(v.salary)}, бонусы ${money(v.bonus)}${v.projectedBonus ? `, из них в прогнозе ${money(v.projectedBonus)}` : ""}`}
+              >
+                <span className="chart-tooltip">
+                  {monthLabel(v.month)}
+                  <strong>{money(v.total)}</strong>
+                  {v.projectedBonus > 0 && (
+                    <small>В прогнозе: {money(v.projectedBonus)}</small>
+                  )}
+                </span>
+                <span
+                  className="bar-stack"
+                  style={{ height: `${(v.total / ceiling) * 100}%` }}
+                  aria-hidden="true"
+                >
+                  <span
+                    className="bar-projected"
+                    style={{ flex: v.projectedBonus }}
+                  />
+                  <span
+                    className="bar-bonus"
+                    style={{ flex: round(v.bonus - v.projectedBonus) }}
+                  />
+                  <span className="bar-salary" style={{ flex: v.salary }} />
+                </span>
+                <span className="chart-month">
+                  {new Intl.DateTimeFormat("ru-RU", { month: "short" })
+                    .format(new Date(`${v.month}-01T12:00:00`))
+                    .replace(".", "")}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+      <div className="chart-summary" aria-live="polite" aria-atomic="true">
+        <span>
+          {monthLabel(selected.month)} · {mode === "plan" ? "План" : "Получено"}
+        </span>
+        <strong>{money(selected.total)}</strong>
+        <button className="text-button" onClick={reset}>
+          К текущему месяцу
+        </button>
+      </div>
+      <p className="chart-note">
+        {mode === "plan"
+          ? `Включает оклад и бонусы на плановые даты.${selected.projectedBonus > 0 ? ` Из суммы выбранного месяца ${money(selected.projectedBonus)} — за незакрытые этапы.` : ""} Бонусы в прогнозе зависят от закрытия этапов.`
+          : "Показаны фактические поступления. Для ожидаемого дохода выберите «План»."}
+      </p>
+    </section>
   );
 }
 
@@ -1347,27 +1453,12 @@ export default function App() {
                   <ArrowRight size={16} />
                 </button>
               </section>
-              <section className="panel income-panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Динамика дохода</h2>
-                    <p>Фактически получено за 6 месяцев</p>
-                  </div>
-                  <ChartBar size={20} className="muted" />
-                </div>
-                <div className="chart-legend">
-                  <span>
-                    <i className="salary-key" />
-                    Оклад
-                  </span>
-                  <span>
-                    <i className="bonus-key" />
-                    Бонусы за проекты
-                  </span>
-                  <span className="chart-unit">₽ / месяц</span>
-                </div>
-                <IncomeChart data={data} month={month} onMonth={setMonth} />
-              </section>
+              <IncomeChart
+                data={data}
+                month={month}
+                currentMonth={monthOf(currentDate)}
+                onMonth={setMonth}
+              />
             </div>
             {overdue.length > 0 && (
               <button

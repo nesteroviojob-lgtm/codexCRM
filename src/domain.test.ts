@@ -4,6 +4,7 @@ import {
   bonus,
   emptyData,
   entries,
+  incomeForMonth,
   monthOf,
   nextPayday,
   nextPaymentPlan,
@@ -61,6 +62,82 @@ function payoutFixture() {
   });
   return { d, s };
 }
+
+describe("Динамика дохода: факт и план", () => {
+  it("разделяет фактические поступления и полный план за месяц", () => {
+    const { d } = payoutFixture();
+    const original = JSON.stringify(d);
+    expect(incomeForMonth(d, "2026-11", "received")).toEqual({
+      month: "2026-11",
+      salary: 20000,
+      bonus: 0,
+      projectedBonus: 0,
+      total: 20000,
+    });
+    expect(incomeForMonth(d, "2026-11", "plan")).toEqual({
+      month: "2026-11",
+      salary: 40000,
+      bonus: 7310.8,
+      projectedBonus: 7310.8,
+      total: 47310.8,
+    });
+    expect(JSON.stringify(d)).toBe(original);
+  });
+  it("показывает будущие условия оклада и бонусы в нужном месяце", () => {
+    const { d, s } = payoutFixture();
+    d.settings.salaryPlans.push({
+      from: "2026-12",
+      first: 25000,
+      second: 25000,
+    });
+    s.dueDate = "2026-12-10";
+    expect(incomeForMonth(d, "2026-11", "plan").total).toBe(40000);
+    expect(incomeForMonth(d, "2026-12", "plan").total).toBe(57310.8);
+    expect(incomeForMonth(d, "2026-12", "received").total).toBe(0);
+    expect(incomeForMonth(d, "2027-01", "plan").total).toBe(50000);
+  });
+  it("относит позднее получение к фактическому месяцу, план — к плановому", () => {
+    const { d, s } = payoutFixture();
+    s.status = "closed";
+    s.closedDate = "2026-10-12";
+    d.payments.push({
+      id: "late-bonus",
+      entryId: s.id,
+      amount: 7310.8,
+      date: "2026-11-02",
+      note: "",
+    });
+    expect(incomeForMonth(d, "2026-10", "plan").bonus).toBe(7310.8);
+    expect(incomeForMonth(d, "2026-11", "plan").bonus).toBe(0);
+    expect(incomeForMonth(d, "2026-11", "received").bonus).toBe(7310.8);
+    expect(incomeForMonth(d, "2026-10", "received").bonus).toBe(0);
+  });
+  it("после закрытия бонус остаётся в плане и перестаёт быть условным", () => {
+    const { d, s } = payoutFixture();
+    s.status = "closed";
+    s.closedDate = "2026-11-04";
+    expect(incomeForMonth(d, "2026-11", "plan")).toEqual({
+      month: "2026-11",
+      salary: 40000,
+      bonus: 7310.8,
+      projectedBonus: 0,
+      total: 47310.8,
+    });
+  });
+  it("учитывает округление каждого этапа и не выдумывает поступления", () => {
+    const { d, s } = payoutFixture();
+    s.amount = 1234.56;
+    d.projects[0].stages.push({ ...s, id: "another-stage" });
+    expect(incomeForMonth(d, "2026-11", "plan").bonus).toBe(172.84);
+    expect(incomeForMonth(d, "2026-12", "received")).toEqual({
+      month: "2026-12",
+      salary: 0,
+      bonus: 0,
+      projectedBonus: 0,
+      total: 0,
+    });
+  });
+});
 
 describe("План ближайшей выплаты", () => {
   it("включает в 15 ноября плановый бонус 7310,80 из месячного прогноза", () => {

@@ -154,6 +154,39 @@ export function entries(data: Data, month: string): Entry[] {
     (a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type),
   );
 }
+
+export type IncomeMode = "received" | "plan";
+
+export function incomeForMonth(data: Data, month: string, mode: IncomeMode) {
+  const total = (values: number[]) =>
+    round(values.reduce((sum, value) => sum + value, 0));
+  const scheduled = mode === "plan" ? entries(data, month) : [];
+  const receipts =
+    mode === "received"
+      ? data.payments.filter((p) => monthOf(p.date) === month)
+      : [];
+  const salary =
+    mode === "plan"
+      ? total(scheduled.filter((e) => e.type === "salary").map((e) => e.amount))
+      : total(
+          receipts
+            .filter((p) => p.entryId.startsWith("salary-"))
+            .map((p) => p.amount),
+        );
+  const bonus =
+    mode === "plan"
+      ? total(scheduled.filter((e) => e.type === "bonus").map((e) => e.amount))
+      : total(
+          receipts
+            .filter((p) => !p.entryId.startsWith("salary-"))
+            .map((p) => p.amount),
+        );
+  const projectedBonus = total(
+    scheduled.filter((e) => !e.eligible).map((e) => e.amount),
+  );
+  return { month, salary, bonus, projectedBonus, total: round(salary + bonus) };
+}
+
 export function overdueEntries(data: Data, asOf = today()): Entry[] {
   const months = new Set<string>();
   for (
