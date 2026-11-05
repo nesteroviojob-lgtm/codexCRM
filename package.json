@@ -1,0 +1,27 @@
+{
+  "name": "dolya-crm",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource-variable/manrope": "^5.2.8",
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.0",
+    "vitest": "^4.0.0"
+  }
+}
