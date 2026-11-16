@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useDeferredValue } from "react";
+import PaymentsView from "./PaymentsView";
+import type { PayoutFilter } from "./payouts";
 import type { FormEvent, ReactNode } from "react";
 import {
   SquaresFour,
@@ -747,7 +749,7 @@ export default function App() {
   const deferredSearch = useDeferredValue(search);
   const [projectFilter, setProjectFilter] = useState("active");
   const [paymentTab, setPaymentTab] = useState("expected");
-  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState<PayoutFilter>("all");
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -824,17 +826,6 @@ export default function App() {
         (Date.parse(reminderDate) - Date.parse(currentDate)) / 86400000,
       )
     : 0;
-  const listedEntries =
-    paymentFilter === "overdue"
-      ? overdue
-      : monthEntries.filter(
-          (e) =>
-            paymentFilter === "all" ||
-            (paymentFilter === "unpaid" &&
-              e.eligible &&
-              remaining(data, e) > 0) ||
-            paymentFilter === e.type,
-        );
   const recent = [...data.payments]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 4);
@@ -1096,34 +1087,6 @@ export default function App() {
       >
         Добавьте проект и разбейте его бюджет на этапы.
       </Empty>
-    );
-  }
-  function entryStatus(e: Entry) {
-    if (!e.eligible)
-      return (
-        <span className="badge neutral">
-          <span />
-          Планируется
-        </span>
-      );
-    if (!remaining(data, e))
-      return (
-        <span className="badge success">
-          <Check size={12} />
-          Получено
-        </span>
-      );
-    if (e.date < today())
-      return (
-        <span className="badge warning">
-          <span />
-          Ожидает получения
-        </span>
-      );
-    return (
-      <span className="badge neutral">
-        <span />К выплате
-      </span>
     );
   }
 
@@ -1949,225 +1912,19 @@ export default function App() {
         )}
 
         {view === "payments" && (
-          <>
-            <div className="page-heading">
-              <div>
-                <div className="eyebrow">От начисления до поступления</div>
-                <h1>Мои выплаты</h1>
-                <p>
-                  Учитывайте оклад и бонусы, отмечайте фактически полученные
-                  деньги.
-                </p>
-              </div>
-              {monthControl}
-            </div>
-            <section className="metrics project-metrics">
-              <div className="metric lead">
-                <span>Получено за месяц</span>
-                <strong>{money(received)}</strong>
-                <small>По дате фактического поступления</small>
-              </div>
-              <div className="metric">
-                <span>Осталось получить</span>
-                <strong>{money(toReceive)}</strong>
-                <small>Из начисленного за выбранный месяц</small>
-              </div>
-              <div className="metric">
-                <span>Планируемые бонусы</span>
-                <strong>{money(pipeline)}</strong>
-                <small>Этапы ещё не закрыты</small>
-              </div>
-            </section>
-            <div className="list-toolbar">
-              <div className="tabs">
-                <button
-                  className={paymentTab === "expected" ? "active" : ""}
-                  onClick={() => setPaymentTab("expected")}
-                >
-                  План выплат
-                </button>
-                <button
-                  className={paymentTab === "history" ? "active" : ""}
-                  onClick={() => setPaymentTab("history")}
-                >
-                  История поступлений
-                </button>
-              </div>
-              {paymentTab === "expected" && (
-                <select
-                  aria-label="Фильтр выплат"
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value)}
-                >
-                  <option value="all">Все выплаты</option>
-                  <option value="unpaid">Осталось получить за месяц</option>
-                  <option value="overdue">Просроченные за всё время</option>
-                  <option value="bonus">Только бонусы</option>
-                  <option value="salary">Только оклад</option>
-                </select>
-              )}
-            </div>
-            <section className="panel">
-              {paymentTab === "expected" ? (
-                <>
-                  <div className="section-header">
-                    <h2>
-                      {paymentFilter === "overdue"
-                        ? "Ожидают получения · все месяцы"
-                        : `План на ${monthLabel(month).toLocaleLowerCase("ru")}`}
-                    </h2>
-                    <span className="subtle">1 и 15 числа</span>
-                  </div>
-                  {listedEntries.length ? (
-                    <div className="table-scroll">
-                      <table className="payments-table">
-                        <thead>
-                          <tr>
-                            <th>Источник</th>
-                            <th>Плановая дата</th>
-                            <th className="numeric">Начислено / план</th>
-                            <th className="numeric">Остаток</th>
-                            <th>Статус</th>
-                            <th>Действие</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {listedEntries.map((e) => (
-                            <tr key={e.id}>
-                              <td>
-                                <div className="payment-source">
-                                  {e.type === "salary" ? (
-                                    <span className="salary-avatar">
-                                      <Wallet size={19} />
-                                    </span>
-                                  ) : (
-                                    <Avatar
-                                      project={{
-                                        code: e.code!,
-                                        color: e.color!,
-                                      }}
-                                    />
-                                  )}
-                                  <span>
-                                    <strong>{e.title}</strong>
-                                    <small>{e.subtitle}</small>
-                                  </span>
-                                </div>
-                              </td>
-                              <td>
-                                {dateLabel(e.date, true)}
-                                {paymentFilter === "overdue" &&
-                                  ` ${e.date.slice(0, 4)}`}
-                              </td>
-                              <td className="numeric">{money(e.amount)}</td>
-                              <td className="numeric">
-                                {money(remaining(data, e))}
-                              </td>
-                              <td>{entryStatus(e)}</td>
-                              <td>
-                                {e.eligible && remaining(data, e) > 0 ? (
-                                  <button
-                                    className="button compact"
-                                    onClick={() => setPaymentModal(e)}
-                                  >
-                                    Отметить получение
-                                    <ArrowDownLeft size={14} />
-                                  </button>
-                                ) : !e.eligible ? (
-                                  <button
-                                    className="text-button"
-                                    onClick={() =>
-                                      navigate(`projects/${e.projectId}`)
-                                    }
-                                  >
-                                    К этапу
-                                    <ArrowUpRight size={14} />
-                                  </button>
-                                ) : (
-                                  <CheckCircle size={19} className="positive" />
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <Empty title="Здесь всё спокойно">
-                      {paymentFilter === "overdue"
-                        ? "Все выплаты с прошедшей плановой датой уже получены."
-                        : "За выбранный месяц выплат с таким фильтром нет."}
-                    </Empty>
-                  )}
-                  <div className="table-note">
-                    <Info size={15} />
-                    Планируемые бонусы станут доступны к получению после
-                    закрытия этапов.
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="section-header">
-                    <h2>Полученные деньги</h2>
-                    <span className="subtle">По фактической дате</span>
-                  </div>
-                  {data.payments.some((p) => monthOf(p.date) === month) ? (
-                    <div className="table-scroll">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Источник</th>
-                            <th>Дата получения</th>
-                            <th>Комментарий</th>
-                            <th className="numeric">Сумма</th>
-                            <th>
-                              <span className="sr-only">Удаление выплаты</span>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...data.payments]
-                            .filter((p) => monthOf(p.date) === month)
-                            .sort((a, b) => b.date.localeCompare(a.date))
-                            .map((p) => {
-                              const e = findEntry(data, p.entryId);
-                              return (
-                                <tr key={p.id}>
-                                  <td>
-                                    <strong>{e?.title}</strong>
-                                    <small>{e?.subtitle}</small>
-                                  </td>
-                                  <td>{dateLabel(p.date, true)}</td>
-                                  <td className="muted">{p.note || "—"}</td>
-                                  <td className="numeric positive">
-                                    +{money(p.amount)}
-                                  </td>
-                                  <td>
-                                    <button
-                                      className="icon-button danger-button"
-                                      aria-label={`Удалить выплату ${money(p.amount)}`}
-                                      title="Удалить выплату — сумма вернётся в остаток"
-                                      onClick={() => deletePayment(p)}
-                                    >
-                                      <Trash size={17} />
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <Empty title="Поступлений пока нет">
-                      Отметьте получение в плане выплат. Каждая выплата появится
-                      здесь с датой и суммой.
-                    </Empty>
-                  )}
-                </>
-              )}
-            </section>
-          </>
+          <PaymentsView
+            data={data}
+            month={month}
+            currentDate={currentDate}
+            monthControl={monthControl}
+            onMonth={setMonth}
+            tab={paymentTab}
+            onTab={setPaymentTab}
+            filter={paymentFilter}
+            onFilter={setPaymentFilter}
+            onReceive={setPaymentModal}
+            onDelete={deletePayment}
+          />
         )}
 
         {view === "settings" && (

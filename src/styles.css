@@ -3116,3 +3116,310 @@ select {
     padding-right: 16px;
   }
 }
+
+/* Payment plans and receipts use the same source grouping and period controls. */
+.payout-period-bar,
+.payout-period-picker,
+.payout-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.payout-period-bar {
+  margin: 0 0 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.payout-period-picker {
+  justify-content: flex-start;
+}
+.payout-period-picker > span,
+.payout-period-bar > p,
+.payout-period-note,
+.payout-group-header small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.payout-period-picker .month-control {
+  height: 44px;
+}
+.payout-period-picker .month-control > .icon-button {
+  width: 40px;
+  height: 42px;
+}
+.payout-period-picker .text-button {
+  min-height: 44px;
+}
+.payout-tabs {
+  margin-bottom: 16px;
+}
+.payout-tabs .tabs {
+  max-width: 100%;
+}
+.payout-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.payout-filters > label {
+  flex: 1 1 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  min-width: 0;
+}
+.payout-filters select,
+.payout-filters input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+}
+.payout-filters input:disabled {
+  opacity: 0.5;
+  background: var(--ground);
+}
+.payout-reset {
+  min-height: 44px;
+}
+.payout-period-note {
+  margin: 12px 0 20px;
+  line-height: 1.7;
+  max-width: 1000px;
+}
+.payout-range-error {
+  color: #a34636;
+  font-size: 12px;
+  margin-top: 12px;
+}
+.payout-list-heading {
+  margin: 0 0 14px;
+}
+.payout-list-heading h2 {
+  font-size: 15px;
+}
+.payout-groups {
+  display: grid;
+  gap: 18px;
+}
+.payout-group {
+  min-width: 0;
+}
+.payout-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  padding: 20px;
+  background: #fafbf9;
+}
+.payout-salary .payout-group-header {
+  background: #f0f4ef;
+}
+.payout-group-header h3 {
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+.payout-group-header .payment-source {
+  min-width: 0;
+  flex: 1 1 200px;
+}
+.payout-group-header .payment-source > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.payout-group-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+}
+.payout-group-totals > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+}
+.payout-group-totals span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.payout-group-totals strong {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.payout-table td {
+  height: 68px;
+}
+.payout-table td:first-child {
+  min-width: 160px;
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+.payout-table td:first-child strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+.payout-table td:not(:first-child) {
+  white-space: nowrap;
+}
+.payout-table th,
+.payout-table td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.payout-table th:first-child,
+.payout-table td:first-child {
+  padding-left: 20px;
+}
+.payout-table th:last-child,
+.payout-table td:last-child {
+  padding-right: 20px;
+}
+.payout-history-table td:nth-child(4) {
+  max-width: 280px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.payout-row-action .button {
+  white-space: nowrap;
+}
+.payout-row-action .text-button {
+  min-height: 40px;
+}
+.payout-row-action > .positive {
+  vertical-align: middle;
+}
+.payout-footnote {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.payout-footnote > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+@media (max-width: 700px) {
+  .payout-period-bar {
+    align-items: flex-start;
+  }
+  .payout-period-picker {
+    width: 100%;
+    gap: 8px;
+  }
+  .payout-period-picker > span {
+    width: 100%;
+  }
+  .payout-period-bar > p {
+    font-size: 11px;
+  }
+  .payout-tabs .tabs button {
+    font-size: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .payout-filters {
+    gap: 12px 10px;
+  }
+  .payout-filters > label {
+    flex-basis: calc(50% - 10px);
+  }
+  .payout-filters input,
+  .payout-filters select {
+    font-size: 12px;
+  }
+  .payout-group-header {
+    padding: 16px;
+    gap: 14px;
+  }
+  .payout-group-header .payment-source {
+    flex-basis: 100%;
+  }
+  .payout-group-totals {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .payout-group-totals > div {
+    text-align: left;
+  }
+  .payout-group-totals strong {
+    font-size: 14px;
+  }
+  .payout-group-totals span {
+    font-size: 10px;
+  }
+  .payout-group .payout-table,
+  .payout-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .payout-table thead {
+    display: none;
+  }
+  .payout-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .payout-table td,
+  .payout-table td:first-child,
+  .payout-table td:last-child {
+    display: block;
+    padding: 0;
+    height: auto;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    min-width: 0;
+    max-width: none;
+    font-size: 12px;
+  }
+  .payout-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 450;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .payout-table td:first-child {
+    grid-column: 1 / -1;
+  }
+  .payout-table td:first-child strong {
+    font-size: 13px;
+  }
+  .payout-table .payout-row-action {
+    grid-column: 1 / -1;
+  }
+  .payout-row-action::before {
+    display: none !important;
+  }
+  .payout-row-action .button {
+    min-height: 44px;
+  }
+  .payout-row-action .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
